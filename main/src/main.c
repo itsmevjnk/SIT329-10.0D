@@ -17,7 +17,6 @@ void app_main(void)
     rt_init();
 
     while (true) {
-        ESP_LOGI(TAG, "Temperature: %.2f C", rt_read(portMAX_DELAY));
-        vTaskDelay(pdMS_TO_TICKS(1000));
+        vTaskDelay(1); // so we can keep watchdog happy
     }
 }
