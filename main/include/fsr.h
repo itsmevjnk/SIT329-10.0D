@@ -3,6 +3,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include <freertos/FreeRTOS.h>
+
 /* FSR force curve - pairs of reference resistances and force values (g) */
 #define FSR_RESISTANCES \
     100000, \
@@ -19,11 +21,22 @@
 
 #define FSR_R_PD                    1000 // pulldown resistance
 
+/* pin config */
+#define FSR_PIN_CHANNEL             ADC_CHANNEL_0 // ADC channel of sense pin
+
 /*
- * float fsr_calc(int voltage)
- *  Calculates the applied force given the FSR's measurement.
- *  Inputs:
- *   - voltage : The measured voltage across the FSR's pulldown resistor in mV.
- *  Output: The applied force in grams.
+ * void fsr_init()
+ *  Initialises FSR sensing.
+ *  Inputs: None.
+ *  Output: None.
  */
-float fsr_calc(int voltage);
+void fsr_init();
+
+/*
+ * float fsr_read(TickType_t max_wait)
+ *  Reads the current force measurement from the FSR.
+ *  Inputs:
+ *   - max_wait : Max duration (in ticks) to wait for ADC mutex acquisition.
+ *  Output: The force measurement in grams, or NAN if reading failed.
+ */
+float fsr_read(TickType_t max_wait);
