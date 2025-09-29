@@ -39,6 +39,13 @@ void adc_init() {
     adc_mutex = xSemaphoreCreateMutexStatic(&adc_mutex_buf);
 }
 
+void adc_init_channel(adc_channel_t channel) {
+    adc_oneshot_chan_cfg_t config = {
+        ADC_ATTEN_DB_12, ADC_BITWIDTH_DEFAULT
+    };
+    ESP_ERROR_CHECK(adc_oneshot_config_channel(adc_unit, channel, &config));
+}
+
 esp_err_t adc_read(adc_channel_t channel, int *voltage, TickType_t max_wait) {
     if (!adc_unit || !adc_calib || !voltage || !adc_mutex)
         return ESP_ERR_INVALID_STATE; // not initialised yet

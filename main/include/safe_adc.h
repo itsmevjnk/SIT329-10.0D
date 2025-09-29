@@ -19,6 +19,15 @@
 void adc_init();
 
 /*
+ * void adc_init_channel(adc_channel_t channel)
+ *  Initialises the specified ADC channel for analogue input.
+ *  Inputs:
+ *   - channel : The ADC0 channel number (0-4 for GPIO0-4).
+ *  Output: None.
+ */
+void adc_init_channel(adc_channel_t channel);
+
+/*
  * esp_err_t adc_read(adc_channel_t channel, int *voltage, TickType_t max_wait)
  *  Attempts to read the voltage of a specified ADC0 channel. This function is
  *  essentially a thread-safe wrapper for the ESP32 ADC server, allowing the
