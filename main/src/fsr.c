@@ -133,7 +133,10 @@ bool fsr_occupancy;
 static void fsr_occ_callback(TimerHandle_t timer) {
     (void) timer;
     bool occupancy = fsr_avg_force >= FSR_OCC_THRESHOLD;
-    ESP_LOGI(TAG, "Average force: %.2f g", fsr_avg_force);
+    ESP_LOGI(
+        TAG, "average force: %.2f g (occupancy: %d)",
+        fsr_avg_force, occupancy ? 1 : 0
+    );
     if (occupancy != fsr_occupancy) {
         fsr_occupancy = occupancy;
         xEventGroupSetBits(se_events, SE_OCC_UPDATE);
