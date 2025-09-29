@@ -2,6 +2,7 @@
 
 #include <esp_log.h>
 
+#include "sense_events.h"
 #include "safe_adc.h"
 #include "fsr.h"
 #include "thermistor.h"
@@ -12,6 +13,7 @@ void app_main(void)
 {
     ESP_LOGI(TAG, "Hello, World!"); // TODO
 
+    se_init();
     adc_init();
     fsr_init();
     rt_init();

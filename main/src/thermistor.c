@@ -2,6 +2,7 @@
 #include "vdiv.h"
 #include "safe_adc.h"
 #include "priorities.h"
+#include "sense_events.h"
 
 #include <esp_log.h>
 
@@ -86,6 +87,8 @@ static void rt_task(void *parameter) {
             gpio_set_level(RT_LED_PIN, 0); rt_led_state = false;
             ESP_LOGI(TAG, "deactivated LED alarm");
         }
+
+        xEventGroupSetBits(se_events, SE_TEMP_UPDATE); // notify other tasks
 
         vTaskDelay(pdMS_TO_TICKS(1000 * 60 * RT_SENSE_PERIOD));
     }
