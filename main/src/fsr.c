@@ -1,9 +1,14 @@
 #include "fsr.h"
 #include "vdiv.h" // voltage divider support
-
 #include "safe_adc.h"
+#include "priorities.h"
+#include "sense_events.h"
+
+#include <esp_log.h>
 
 #include <math.h>
+
+#define TAG                         "fsr" // for logging
 
 static const float fsr_curve_R[] = { FSR_RESISTANCES };
 static const float fsr_curve_F[] = { FSR_FORCES };
@@ -37,8 +42,128 @@ static float fsr_calc(int voltage) {
     return F;
 }
 
+static StaticTask_t fsr_tap_task_buf;
+#define STACK_SIZE                          2048
+static StackType_t fsr_tap_task_stack[STACK_SIZE];
+
+#define FSR_TAP_QUEUE_LEN                   16
+static QueueHandle_t fsr_tap_queue; // for passing tap tickstamps
+static TickType_t fsr_tap_queue_stor[FSR_TAP_QUEUE_LEN];
+static StaticQueue_t fsr_tap_queue_buf;
+
+/*
+ * static void fsr_tap_task(void *parameter)
+ *  Task function for the FSR tap aggregation task.
+ *  Inputs:
+ *   - parameter: Parameter from xTaskCreateStatic - ignored.
+ *  Output: None.
+ */
+static void fsr_tap_task(void *parameter) {
+    TickType_t tap_stamps[FSR_NUM_TAPS];
+    size_t count = 0;
+
+    while (true) {
+        TickType_t stamp;
+        if (xQueueReceive(fsr_tap_queue, &stamp, portMAX_DELAY)) {
+            /* received tickstamp */
+            tap_stamps[count % FSR_NUM_TAPS] = stamp;
+            count++;
+
+            if (count >= FSR_NUM_TAPS) {
+                TickType_t first = tap_stamps[
+                    (count - FSR_NUM_TAPS) % FSR_NUM_TAPS
+                ];
+                if (stamp - first <= pdMS_TO_TICKS(FSR_TAP_DURATION)) {
+                    ESP_LOGI(
+                        TAG, "%d taps registered in %d ms - triggering signal",
+                        FSR_NUM_TAPS, pdTICKS_TO_MS(stamp - first)
+                    );
+                    xEventGroupSetBits(se_events, SE_HELP);
+                    count = 0; // might be a good iea to do this anyway
+                }
+            }
+        }
+    }
+}
+
+static float fsr_avg_force; // average recorded force
+static TickType_t fsr_last_tap = 0; // tickstamp of last tap - for debouncing
+
+/* task support structures */
+static StaticTask_t fsr_task_buf; // TCB
+static StackType_t fsr_task_stack[STACK_SIZE];
+
+/*
+ * static void fsr_task(void *parameter)
+ *  Task function for the FSR sensing task.
+ *  Inputs:
+ *   - parameter: Parameter from xTaskCreateStatic - ignored.
+ *  Output: None.
+ */
+static void fsr_task(void *parameter) {
+    while (true) {
+        float force = fsr_read(portMAX_DELAY);
+        fsr_avg_force = // exponential moving average
+            FSR_AVG_FACTOR * force + (1 - FSR_AVG_FACTOR) * fsr_avg_force;
+
+        if (force - fsr_avg_force >= FSR_TAP_THRESHOLD) {
+            TickType_t now = xTaskGetTickCount();
+            if (now - fsr_last_tap >= pdMS_TO_TICKS(FSR_TAP_DEBOUNCE)) {
+                ESP_LOGI(TAG, "tap detected");
+                fsr_last_tap = now;
+                xQueueSend(fsr_tap_queue, &now, 0); // so we don't get stuck
+            }
+        }
+
+        vTaskDelay(pdMS_TO_TICKS(FSR_INTERVAL));
+    }
+}
+
+static StaticTimer_t fsr_occ_timer_buf; // buffer for occupancy check timer
+
+bool fsr_occupancy;
+
+/*
+ * static void fsr_occ_callback(TimerHandle_t timer)
+ *  Callback function for checking bed occupancy.
+ *  Inputs:
+ *   - timer : The timer that triggered this callback.
+ *  Output: None.
+ */
+static void fsr_occ_callback(TimerHandle_t timer) {
+    (void) timer;
+    bool occupancy = fsr_avg_force >= FSR_OCC_THRESHOLD;
+    ESP_LOGI(TAG, "Average force: %.2f g", fsr_avg_force);
+    if (occupancy != fsr_occupancy) {
+        fsr_occupancy = occupancy;
+        xEventGroupSetBits(se_events, SE_OCC_UPDATE);
+    }
+}
+
 void fsr_init() {
     adc_init_channel(FSR_PIN_CHANNEL);
+    fsr_avg_force = fsr_read(portMAX_DELAY); // initialise average force
+    fsr_occupancy = fsr_avg_force >= FSR_OCC_THRESHOLD; // and also occupancy
+
+    fsr_tap_queue = xQueueCreateStatic(
+        FSR_TAP_QUEUE_LEN, sizeof(TickType_t),
+        (uint8_t *)&fsr_tap_queue_stor, &fsr_tap_queue_buf
+    );
+
+    xTaskCreateStatic(
+        fsr_task, "fsr", STACK_SIZE, NULL, MAX_PRIORITY,
+        fsr_task_stack, &fsr_task_buf
+    ); // create sensing task
+
+    xTaskCreateStatic(
+        fsr_tap_task, "fsr_tap", STACK_SIZE, NULL, MAX_PRIORITY - 1,
+        fsr_tap_task_stack, &fsr_tap_task_buf
+    ); // create tap aggregation task
+
+    xTimerCreateStatic(
+        "fsr_occ", pdMS_TO_TICKS(1000 * 60 * FSR_OCC_PERIOD), pdTRUE,
+        NULL, fsr_occ_callback, &fsr_occ_timer_buf
+    ); // create occupancy check timer
 }
 
 float fsr_read(TickType_t max_wait) {

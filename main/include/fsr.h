@@ -24,6 +24,18 @@
 /* pin config */
 #define FSR_PIN_CHANNEL             ADC_CHANNEL_0 // ADC channel of sense pin
 
+#define FSR_INTERVAL                20 // interval between FSR readings (in ms)
+#define FSR_AVG_FACTOR              0.25 // alpha factor for exp. moving avg
+#define FSR_OCC_THRESHOLD           500 // threshold for occupancy
+#define FSR_OCC_PERIOD              1 // period (in mins) between occ. checks
+#define FSR_TAP_THRESHOLD           2000 // threshold for mat tapping
+#define FSR_TAP_DEBOUNCE            150 // debounce duration (ms) between taps
+
+#define FSR_NUM_TAPS                5 // number of taps for signal trigger
+#define FSR_TAP_DURATION            2000 // duration (ms) for tap to be reg'd
+
+extern bool fsr_occupancy; // occupancy status
+
 /*
  * void fsr_init()
  *  Initialises FSR sensing.
