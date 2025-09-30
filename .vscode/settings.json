@@ -1,14 +1,14 @@
 {
   "C_Cpp.intelliSenseEngine": "default",
-  "idf.espIdfPath": "/home/itsmevjnk/esp/v5.5/esp-idf",
+  "idf.espIdfPath": "/home/itsmevjnk/esp/v5.5.1/esp-idf",
   "idf.pythonInstallPath": "/usr/bin/python3",
   "idf.openOcdConfigs": [
-    "board/esp32c3-builtin.cfg"
+    "board/esp32-wrover-kit-3.3v.cfg"
   ],
-  "idf.port": "/dev/ttyACM0",
+  "idf.port": "/dev/ttyUSB0",
   "idf.toolsPath": "/home/itsmevjnk/.espressif",
   "idf.customExtraVars": {
-    "IDF_TARGET": "esp32c3"
+    "IDF_TARGET": "esp32"
   },
   "clangd.path": "/home/itsmevjnk/.espressif/tools/esp-clang/esp-19.1.2_20250312/esp-clang/bin/clangd",
   "clangd.arguments": [
@@ -19,6 +19,6 @@
   "files.associations": {
     "adc.h": "c"
   },
-  "idf.monitorPort": "/dev/ttyACM0",
+  "idf.monitorPort": "/dev/ttyUSB0",
   "idf.flashType": "UART"
 }

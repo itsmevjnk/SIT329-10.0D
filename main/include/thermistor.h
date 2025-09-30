@@ -13,8 +13,9 @@
 #define RT_R_PD                     10000 // pulldown resistor
 
 /* pin configuration */
-#define RT_PIN_CHANNEL              ADC_CHANNEL_1 // ADC channel of sense pin
-#define RT_LED_PIN                  10 // bedside LED for high temp alert
+#define RT_PIN_CHANNEL              ADC_CHANNEL_6 // ADC channel of sense pin
+    // GPIO 34 - ADC1 channel 6
+#define RT_LED_PIN                  2 // bedside LED for high temp alert
 
 #define RT_SENSE_PERIOD             5 // period (in mins) to sense temperature
 #define RT_LED_THRESHOLD            38 // threshold for high temp LED alert

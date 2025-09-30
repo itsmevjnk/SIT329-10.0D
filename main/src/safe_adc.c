@@ -19,20 +19,20 @@ static SemaphoreHandle_t adc_mutex;
 void adc_init() {
     /* initalise ADC unit */
     adc_oneshot_unit_init_cfg_t unit_config = {
-        /* unit_id */ ADC_UNIT_1, // ADC0 (GPIO 0-4)
+        /* unit_id */ ADC_UNIT_1, // ADC1
         /* clk_src */ 0, // default
         /* ulp_mode */ ADC_ULP_MODE_DISABLE
     };
     ESP_ERROR_CHECK(adc_oneshot_new_unit(&unit_config, &adc_unit));
     
     /* retrieve calibration */
-    adc_cali_curve_fitting_config_t calib_config = {
-        /* unit_id */ ADC_UNIT_1, // ADC0 (GPIO 0-4)
-        /* channel */ 0, // reserved
+    adc_cali_line_fitting_config_t calib_config = {
+        /* unit_id */ ADC_UNIT_1, // ADC1 (GPIO 32-39)
         /* atten */ ADC_ATTEN_DB_12, // max attenuation for max voltage range
         /* bitwidth */ ADC_BITWIDTH_DEFAULT
+
     };
-    ESP_ERROR_CHECK(adc_cali_create_scheme_curve_fitting(
+    ESP_ERROR_CHECK(adc_cali_create_scheme_line_fitting(
         &calib_config, &adc_calib
     ));
 

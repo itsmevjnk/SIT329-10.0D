@@ -7,7 +7,7 @@
 #include <freertos/FreeRTOS.h>
 #include <hal/adc_types.h>
 
-// NOTE: only ADC0 is supported for now
+// NOTE: only ADC1 is supported for now
 
 /*
  * void adc_init()
@@ -22,7 +22,7 @@ void adc_init();
  * void adc_init_channel(adc_channel_t channel)
  *  Initialises the specified ADC channel for analogue input.
  *  Inputs:
- *   - channel : The ADC0 channel number (0-4 for GPIO0-4).
+ *   - channel : The ADC1 channel number (0-7 corresponding to GPIO 32-39).
  *  Output: None.
  */
 void adc_init_channel(adc_channel_t channel);
@@ -33,7 +33,7 @@ void adc_init_channel(adc_channel_t channel);
  *  essentially a thread-safe wrapper for the ESP32 ADC server, allowing the
  *  ADC channels to be read by multiple tasks.
  *  Inputs:
- *   - channel  : The ADC0 channel number (0-4 for GPIO0-4).
+ *   - channel  : The ADC1 channel number (0-7 corresponding to GPIO 32-39).
  *   - voltage  : Pointer to the voltage output (in millivolts). This must be
  *                non-null.
  *   - max_wait : The maximum mutex acquisition waiting duration in ticks.

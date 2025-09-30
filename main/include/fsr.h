@@ -22,7 +22,8 @@
 #define FSR_R_PD                    1000 // pulldown resistance
 
 /* pin config */
-#define FSR_PIN_CHANNEL             ADC_CHANNEL_0 // ADC channel of sense pin
+#define FSR_PIN_CHANNEL             ADC_CHANNEL_7 // ADC channel of sense pin
+    // GPIO 35 - ADC1 channel 7
 
 #define FSR_INTERVAL                20 // interval between FSR readings (in ms)
 #define FSR_AVG_FACTOR              0.25 // alpha factor for exp. moving avg
