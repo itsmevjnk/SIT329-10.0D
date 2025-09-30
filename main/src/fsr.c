@@ -163,10 +163,11 @@ void fsr_init() {
         fsr_tap_task_stack, &fsr_tap_task_buf
     ); // create tap aggregation task
 
-    xTimerCreateStatic(
+    TimerHandle_t timer = xTimerCreateStatic(
         "fsr_occ", pdMS_TO_TICKS(1000 * 60 * FSR_OCC_PERIOD), pdTRUE,
         NULL, fsr_occ_callback, &fsr_occ_timer_buf
     ); // create occupancy check timer
+    xTimerStart(timer, portMAX_DELAY);
 }
 
 float fsr_read(TickType_t max_wait) {
