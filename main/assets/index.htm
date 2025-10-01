@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+
+<html>
+    <head>
+        <title>Bed Monitoring</title>
+        <script src="chart.umd.min.js"></script>
+        <style>
+            body {
+                margin: 0.5rem 1rem;
+                padding: 0;
+            }
+
+            .container {
+                display: grid;
+                grid-template-columns: auto auto auto;
+            }
+
+            .container div {
+                text-align: center;
+                padding: 0.5rem 0;
+            }
+
+            .title, .content {
+                font-weight: bold;
+            }
+
+            .lg {
+                font-size: 5rem;
+            }
+
+            .orange {
+                animation: b-orange 1s infinite alternate;
+            }
+
+            @keyframes b-orange {
+                from {
+                    background-color: white;
+                }
+                to {
+                    background-color: orange;
+                }
+            }
+
+            .blue {
+                animation: b-blue 1s infinite alternate;
+            }
+
+            @keyframes b-blue {
+                from {
+                    background-color: white;
+                }
+                to {
+                    background-color: darkturquoise;
+                }
+            }
+
+            #help2 {
+                cursor: pointer;
+            }
+
+            .hide {
+                display: none;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>Bed Monitoring</h1>
+        <div class="container">
+            <div class="title">Temperature</div>
+            <div class="title">Occupancy</div>
+            <div class="title">Help</div>
+            <div class="content lg" id="temp">N/A</div>
+            <div class="content lg" id="occu">N/A</div>
+            <div class="content lg" id="help1">Not called</div>
+            <div class="content orange hide" id="help2" role="button" tabindex="0" onclick="clearHelp()">
+                <span class="lg">Called</span><br/>
+                <span>Click here to clear call</span>
+            </div>
+        </div>
+        <canvas id="chart" style="width:100%"></canvas>
+        <audio src="alert.mp3" class="hide" loop="loop" id="alert"></audio>
+        <script>
+            let hostname = window.location.hostname;
+            if (window.location.protocol == 'file:')
+                hostname = prompt('Enter the hostname for WebSocket connection:', 'localhost'   );
+            const socket = new WebSocket(`ws://${hostname}/ws`);
+            const alertSound = document.getElementById('alert');
+            socket.onopen = () => {
+                socket.send(''); // send empty message to receive initial data
+            };
+
+            /* from thermistor.h */
+            const RT_SENSE_PERIOD = 5;
+            const RT_HISTORY_LEN = 24 * 60 / RT_SENSE_PERIOD;
+            const chart = new Chart('chart', {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        data: []
+                    }]
+                },
+                options: {
+                    scales: {
+                        y: {
+                            title: {
+                                display: true,
+                                text: 'Temperature (\u00B0C)'
+                            }
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Minutes'
+                            }
+                        }
+                    },
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Temperature data'
+                        },
+                        legend: {
+                            display: false
+                        }
+                    }
+                }
+            });
+
+            const updateTemp = (temp) => {
+                const elem = document.getElementById('temp');
+                elem.innerHTML = temp + '&nbsp;&deg;C';
+
+                /* set alarms */
+                elem.classList.remove('orange', 'blue'); 
+                if (temp < 35) elem.classList.add('blue'); // hypothermia
+                else if (temp > 39) elem.classList.add('orange'); // high fever
+
+                /* update plot */
+                chart.data.labels = [];
+                const temps = chart.data.datasets[0].data;
+                for (let i = 0; i < temps.length; i++)
+                    chart.data.labels.push(i * RT_SENSE_PERIOD);
+                chart.options.plugins.title.text = `Temperature data for the last ${temps.length * RT_SENSE_PERIOD} mins`;
+                chart.update();
+            };
+
+            socket.onmessage = (event) => {
+                const message = event.data.split(':');
+                const header = message[0], data = message[1];
+                if (header == 'T') { // all temperature readings
+                    const temps = data.split(',');
+                    chart.data.datasets[0].data = temps; // set chart data
+                    updateTemp(temps[temps.length - 1]); // update latest temperature
+                } else if (header == 't') { // new temperature data
+                    if (chart.data.datasets[0].data.length == RT_HISTORY_LEN)
+                        chart.data.datasets[0].data.shift();
+                    chart.data.datasets[0].data.push(data);
+                    updateTemp(data);
+                } else if (header == 'o') { // occupancy
+                    document.getElementById('occu').innerHTML = (data == 1) ? 'Occupied' : 'Unoccupied';
+                } else if (header == 'h') { // help
+                    const elem_trig = document.getElementById('help1');
+                    const elem_notrig = document.getElementById('help2');
+                    if (data == 1) { // triggered
+                        elem_notrig.classList.remove('hide');
+                        elem_trig.classList.add('hide');     
+                        alertSound.currentTime = 0; // rewind to beginning
+                        alertSound.play();
+                    } else { // not triggered
+                        elem_trig.classList.remove('hide');
+                        elem_notrig.classList.add('hide');   
+                        alertSound.pause();                
+                    }
+                }
+            };
+            const clearHelp = () => {
+                fetch(`http://${hostname}/clear`, {
+                    method: 'POST'
+                });
+            };
+        </script>
+    </body>
+</html>
